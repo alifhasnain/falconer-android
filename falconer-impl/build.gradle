@@ -1,0 +1,146 @@
+// :falconer-impl — the full inspector (today's falconer/android module, minus
+// the channel wiring). Linked ONLY for the debug variant via
+// `debugImplementation`. Holds all the heavy deps + code + manifest components;
+// none of it reaches a release build, because release links :falconer-noop.
+apply plugin: "com.android.library"
+apply plugin: "kotlin-android"
+// Compose compiler is configured by this plugin alone — do NOT add a composeOptions{} block.
+apply plugin: "org.jetbrains.kotlin.plugin.compose"
+apply plugin: "app.cash.sqldelight"
+apply plugin: "maven-publish"
+
+// SQLDelight transitively pulls a newer kotlin-stdlib, which conflict-resolution
+// forces onto the whole graph — newer than our pinned Kotlin 2.1.0 compiler. The
+// resulting 2.2 metadata can't be rewritten by any R8/D8 pairable with AGP 8.9.1
+// (floods the log and hangs mergeExtDex). Pin the stdlib down to match the
+// compiler so the dexed metadata stays at 2.1 (see falconer/CLAUDE.md).
+configurations.all {
+    resolutionStrategy {
+        force "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+        force "org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion"
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
+    }
+}
+
+android {
+    namespace = "dev.alifhasnain.falconer"
+
+    compileSdk = 36
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    sourceSets {
+        main.java.srcDirs += "src/main/kotlin"
+        test.java.srcDirs += "src/test/kotlin"
+        androidTest.java.srcDirs += "src/androidTest/kotlin"
+    }
+
+    defaultConfig {
+        minSdk = 21
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments timeout_msec: '120000'
+        // Ships the keep rule for the ServiceLoader-discovered engine into any
+        // consumer that R8-processes this AAR (RELEASE_STRIPPING.md §3.6).
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
+
+    dependencies {
+        // The seam. `api` re-exports FalconerEngine so RealFalconerEngine's
+        // `implements` is visible on this module's public API.
+        api project(":falconer-core")
+
+        // Compose BOM — single source of truth for Compose artifact versions.
+        implementation platform("androidx.compose:compose-bom:2024.09.02")
+        implementation "androidx.compose.runtime:runtime"
+        implementation "androidx.compose.ui:ui"
+        implementation "androidx.compose.ui:ui-graphics"
+        implementation "androidx.compose.material3:material3"
+        implementation "androidx.compose.material:material-icons-core"
+        implementation "androidx.core:core-ktx:1.13.1"
+        implementation "androidx.activity:activity-compose:1.9.3"
+        implementation "androidx.navigation:navigation-compose:2.8.4"
+        implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7"
+        implementation "androidx.lifecycle:lifecycle-runtime-compose:2.8.7"
+
+        // SQLDelight (image BLOB in the row) + coroutines/Flow.
+        implementation "app.cash.sqldelight:android-driver:$sqldelightVersion"
+        implementation "app.cash.sqldelight:coroutines-extensions:$sqldelightVersion"
+
+        implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0"
+        // JSON for the headers Map<->String converter (pure-JVM, unit-test safe).
+        implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3"
+
+        testImplementation("org.jetbrains.kotlin:kotlin-test")
+        testImplementation("org.mockito:mockito-core:5.0.0")
+        testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+        // SQLDelight JVM driver — runs the real SQLite engine in pure-JVM unit
+        // tests (the DAO test needs no device/emulator).
+        testImplementation("app.cash.sqldelight:sqlite-driver:$sqldelightVersion")
+        testImplementation("app.cash.sqldelight:coroutines-extensions:$sqldelightVersion")
+
+        // Instrumented tests — require a device/emulator to run. AndroidX test
+        // stack kept in lockstep with Espresso 3.7.0 (see falconer/CLAUDE.md).
+        androidTestImplementation("androidx.test.ext:junit:1.3.0")
+        androidTestImplementation("androidx.test:runner:1.7.0")
+        androidTestImplementation("androidx.test:core-ktx:1.7.0")
+        androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
+        androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+        androidTestImplementation(platform("androidx.compose:compose-bom:2024.09.02"))
+        androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+        debugImplementation("androidx.compose.ui:ui-test-manifest")
+    }
+
+    testOptions {
+        unitTests.all {
+            useJUnitPlatform()
+
+            testLogging {
+                events "passed", "skipped", "failed", "standardOut", "standardError"
+                outputs.upToDateWhen { false }
+                showStandardStreams = true
+            }
+        }
+    }
+}
+
+// SQLDelight code generation. SQL is validated against the schema at build time;
+// migration verification + schema export are built into the Gradle plugin.
+sqldelight {
+    databases {
+        create("FalconerDb") {
+            packageName = "dev.alifhasnain.falconer.data"
+            schemaOutputDirectory = file("$projectDir/sqldelight-schemas")
+        }
+    }
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                // groupId inherited from the project group (root build.gradle).
+                artifactId = "falconer-impl"
+                version = falconerVersion
+            }
+        }
+    }
+}

@@ -1,0 +1,4 @@
+<!-- The no-op contributes NO manifest components — no Activity, no receiver, no
+     provider, no POST_NOTIFICATIONS. This absence is the whole point: a release
+     build's merged manifest carries none of the inspector. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

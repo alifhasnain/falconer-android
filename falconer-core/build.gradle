@@ -1,0 +1,58 @@
+// :falconer-core — the seam.
+//
+// The ONLY surface the thin plugin knows about: the FalconerEngine interface
+// plus the shared Dart<->Kotlin channel contract (MethodNames / PayloadKeys).
+// Deliberately dependency-light — only kotlinx-coroutines-core (for Flow) and
+// the Android SDK (Context). It must NOT pull Flutter embedding, Compose, or
+// SQLDelight; keeping it tiny is what lets :falconer-noop stay tiny too.
+apply plugin: "com.android.library"
+apply plugin: "kotlin-android"
+apply plugin: "maven-publish"
+
+android {
+    namespace = "dev.alifhasnain.falconer.core"
+    compileSdk = 36
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    sourceSets {
+        main.java.srcDirs += "src/main/kotlin"
+    }
+
+    defaultConfig {
+        minSdk = 21
+    }
+
+    // Publish a single "release" component so maven-publish can consume it.
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
+
+    dependencies {
+        // `api` so FalconerEngine's `Flow<Int>` return type is exported to every
+        // consumer (thin plugin, impl, noop) without a redundant direct dep.
+        api "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0"
+    }
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                // groupId inherited from the project group (root build.gradle).
+                artifactId = "falconer-core"
+                version = falconerVersion
+            }
+        }
+    }
+}

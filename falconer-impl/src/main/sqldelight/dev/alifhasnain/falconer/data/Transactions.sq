@@ -1,0 +1,72 @@
+-- One captured HTTP transaction (request merged with its response or error).
+-- Mirrors HttpTransactionEntity. Headers are stored as JSON strings (see
+-- Converters); the response image is a BLOB in the row (D5). INTEGER columns map
+-- to Kotlin Long; the DAO narrows `statusCode` Long<->Int at the boundary (kept
+-- a plain column so no ColumnAdapter is needed on the generated database).
+CREATE TABLE transactions (
+    id TEXT NOT NULL PRIMARY KEY,
+    startedAt INTEGER NOT NULL,
+    completedAt INTEGER,
+    tookMs INTEGER,
+    method TEXT NOT NULL,
+    url TEXT NOT NULL,
+    host TEXT NOT NULL,
+    path TEXT NOT NULL,
+    scheme TEXT NOT NULL,
+    protocol TEXT,
+    requestHeaders TEXT NOT NULL,
+    requestContentType TEXT,
+    requestContentLength INTEGER,
+    requestBody TEXT,
+    requestBodyKind TEXT NOT NULL,
+    statusCode INTEGER,
+    statusMessage TEXT,
+    responseHeaders TEXT,
+    responseContentType TEXT,
+    responseContentLength INTEGER,
+    responseBody TEXT,
+    responseBodyKind TEXT,
+    responseImageBytes BLOB,
+    error TEXT
+);
+
+-- Hot-path read filter scans url + bodies; index startedAt for the ORDER BY.
+CREATE INDEX transactions_startedAt ON transactions(startedAt);
+
+-- INSERT OR REPLACE covers both the request insert and the response/error merge
+-- (full-row replace by primary key == Room's @Update for a whole-row entity).
+insertOrReplace:
+INSERT OR REPLACE INTO transactions(
+    id, startedAt, completedAt, tookMs, method, url, host, path, scheme, protocol,
+    requestHeaders, requestContentType, requestContentLength, requestBody, requestBodyKind,
+    statusCode, statusMessage, responseHeaders, responseContentType, responseContentLength,
+    responseBody, responseBodyKind, responseImageBytes, error
+) VALUES (
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+    ?, ?, ?, ?, ?,
+    ?, ?, ?, ?, ?,
+    ?, ?, ?, ?
+);
+
+findById:
+SELECT * FROM transactions WHERE id = ?;
+
+observeAll:
+SELECT * FROM transactions ORDER BY startedAt DESC;
+
+observeFiltered:
+SELECT * FROM transactions
+WHERE url LIKE :query OR requestBody LIKE :query OR responseBody LIKE :query
+ORDER BY startedAt DESC;
+
+observeById:
+SELECT * FROM transactions WHERE id = ?;
+
+observeCount:
+SELECT COUNT(*) FROM transactions;
+
+clear:
+DELETE FROM transactions;
+
+deleteBefore:
+DELETE FROM transactions WHERE startedAt < ?;

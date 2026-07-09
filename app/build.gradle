@@ -1,0 +1,69 @@
+// :app — sample host for the native library. NOT published to Maven/JitPack.
+//
+// It consumes the three modules the SAME way the Flutter plugin will, and that
+// is the point: it only ever references FalconerEngine (from :falconer-core)
+// and resolves the concrete engine via ServiceLoader. So the debug/release
+// variant swap below is a faithful, Flutter-free reproduction of Method A —
+// build a release APK and R8 has no live edge to the inspector (§5).
+apply plugin: "com.android.application"
+apply plugin: "kotlin-android"
+
+// A release consumer MUST pin the stdlib down (same reason as :falconer-impl):
+// otherwise a transitive kotlin-stdlib 2.2.x lands on the app graph and the
+// AGP 8.9.1 R8/D8 pair chokes on the 2.2 metadata (falconer/CLAUDE.md). This
+// block is exactly what the Flutter plugin will need on its own side.
+configurations.all {
+    resolutionStrategy {
+        force "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+        force "org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion"
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
+    }
+}
+
+android {
+    namespace = "dev.alifhasnain.falconer.sample"
+    compileSdk = 36
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    sourceSets {
+        main.java.srcDirs += "src/main/kotlin"
+    }
+
+    defaultConfig {
+        applicationId = "dev.alifhasnain.falconer.sample"
+        minSdk = 21
+        targetSdk = 36
+        versionCode = 1
+        versionName = falconerVersion
+    }
+
+    buildTypes {
+        release {
+            // R8 on — so a release build actually PROVES the stripping (§5):
+            // with only :falconer-noop linked, nothing references Compose /
+            // SQLDelight / FalconerActivity, so R8 drops them from the APK.
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    dependencies {
+        // The seam. Same for both variants.
+        implementation project(":falconer-core")
+        // The swap — this is Method A.
+        debugImplementation project(":falconer-impl")
+        releaseImplementation project(":falconer-noop")
+
+        // For collecting engine.observeCount() on the main thread.
+        implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0"
+    }
+}

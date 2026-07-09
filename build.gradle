@@ -1,0 +1,36 @@
+// Root build for the falconer-android Maven artifacts.
+//
+// Legacy `buildscript {}` + `apply plugin:` style (mirrors the plugin's own
+// android/build.gradle): plugins resolve from the buildscript classpath below,
+// so the modules apply them with `apply plugin:` rather than the plugins {} DSL.
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "com.android.tools.build:gradle:8.9.1"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+        // Standalone Compose Compiler Gradle plugin (Kotlin 2.0+). Its version MUST
+        // equal the Kotlin version. Replaces the legacy composeOptions{} block.
+        classpath "org.jetbrains.kotlin:compose-compiler-gradle-plugin:$kotlinVersion"
+        // SQLDelight — generates type-safe DB code from .sq files via a Gradle
+        // task (no KSP/kapt, so no cross-drive relativeTo crash on Windows).
+        classpath "app.cash.sqldelight:gradle-plugin:$sqldelightVersion"
+    }
+}
+
+allprojects {
+    // JitPack serves every artifact under com.github.<user>.<repo>, and for a
+    // multi-module build the inter-module POM dependencies must use that same
+    // group or consumers of :falconer-impl can't resolve :falconer-core. So the
+    // group is pinned to the JitPack coordinate. CHANGE THIS if your GitHub slug
+    // differs (it is com.github.<GITHUB_USER>.<REPO_NAME>). For Maven Central
+    // later, switch it back to a real reverse-DNS group like dev.alifhasnain.
+    group = "com.github.alifhasnain.falconer-android"
+    version = falconerVersion
+    repositories {
+        google()
+        mavenCentral()
+    }
+}

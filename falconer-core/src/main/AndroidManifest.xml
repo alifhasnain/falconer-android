@@ -1,0 +1,3 @@
+<!-- The seam contributes NO manifest components. Namespace comes from
+     build.gradle (AGP 8 rejects a package= attr on a library manifest). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

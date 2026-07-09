@@ -1,0 +1,21 @@
+// falconer-android — standalone Gradle project publishing the three Maven
+// artifacts consumed by the `falconer` Flutter plugin (RELEASE_STRIPPING.md,
+// Method A):
+//   :falconer-core  — the FalconerEngine seam + channel contract (light deps)
+//   :falconer-impl  — full inspector (Compose UI, SQLDelight, notifications)
+//   :falconer-noop  — empty engine, zero heavy deps, no manifest components
+//
+// Repositories are declared in the root build.gradle `allprojects {}` block
+// (legacy style, matching the plugin's own android/build.gradle), so this file
+// deliberately does NOT declare a dependencyResolutionManagement repositories
+// block — doing so would flip Gradle into FAIL_ON_PROJECT_REPOS and break it.
+rootProject.name = 'falconer-android'
+
+include ':falconer-core'
+include ':falconer-impl'
+include ':falconer-noop'
+
+// Sample host — NOT published. Runs the native library without Flutter and
+// doubles as the Method A verification harness (debug=impl, release=noop).
+// jitpack.yml only builds the three library modules, so this never ships.
+include ':app'

@@ -1,0 +1,6 @@
+# Normalize line endings. Critical: gradlew is executed by JitPack on Linux, so
+# it MUST stay LF or the shell fails with "bad interpreter". Binaries untouched.
+* text=auto eol=lf
+*.bat text eol=crlf
+gradlew text eol=lf
+*.jar binary

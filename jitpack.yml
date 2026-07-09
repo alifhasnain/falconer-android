@@ -1,0 +1,20 @@
+# JitPack build config for the falconer-android Maven artifacts.
+#
+# JitPack clones this repo at the requested tag, runs the `install` command
+# below (which publishes each module to ~/.m2), then serves them as
+#   com.github.<user>.<repo>:falconer-core|falconer-impl|falconer-noop:<tag>
+#
+# jvmTarget 17 across the toolchain (falconer/CLAUDE.md), so pin the JDK — the
+# JitPack default is older and the Kotlin/AGP build would fail on it.
+jdk:
+  - openjdk17
+
+before_install:
+  # compileSdk = 36. AGP does NOT auto-download SDK platforms, so make sure the
+  # platform + build-tools exist on the JitPack image (best-effort; harmless if
+  # already present). If a JitPack build ever fails with "failed to find target
+  # android-36", this is the line that fixes it.
+  - echo "y" | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;36.0.0" > /dev/null 2>&1 || true
+
+install:
+  - ./gradlew :falconer-core:publishToMavenLocal :falconer-impl:publishToMavenLocal :falconer-noop:publishToMavenLocal
