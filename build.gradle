@@ -17,18 +17,18 @@ buildscript {
         // SQLDelight — generates type-safe DB code from .sq files via a Gradle
         // task (no KSP/kapt, so no cross-drive relativeTo crash on Windows).
         classpath "app.cash.sqldelight:gradle-plugin:$sqldelightVersion"
+        // Maven Central publishing: signing, sources/javadoc jars, full POM, and
+        // the Central Portal upload — all driven by the GROUP / VERSION_NAME /
+        // POM_* / SONATYPE_* properties in gradle.properties.
+        classpath "com.vanniktech:gradle-maven-publish-plugin:0.30.0"
     }
 }
 
 allprojects {
-    // JitPack serves every artifact under com.github.<user>.<repo>, and for a
-    // multi-module build the inter-module POM dependencies must use that same
-    // group or consumers of :falconer-impl can't resolve :falconer-core. So the
-    // group is pinned to the JitPack coordinate. CHANGE THIS if your GitHub slug
-    // differs (it is com.github.<GITHUB_USER>.<REPO_NAME>). For Maven Central
-    // later, switch it back to a real reverse-DNS group like dev.alifhasnain.
-    group = "com.github.alifhasnain.falconer-android"
-    version = falconerVersion
+    // group + version are set from GROUP / VERSION_NAME (gradle.properties) by
+    // the vanniktech plugin on each published module. Central requires a verified
+    // namespace, so the group is io.github.alifhasnain (NOT the JitPack
+    // com.github.* form). Consumers resolve from mavenCentral().
     repositories {
         google()
         mavenCentral()

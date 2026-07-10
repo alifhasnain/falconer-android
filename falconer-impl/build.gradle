@@ -7,7 +7,8 @@ apply plugin: "kotlin-android"
 // Compose compiler is configured by this plugin alone — do NOT add a composeOptions{} block.
 apply plugin: "org.jetbrains.kotlin.plugin.compose"
 apply plugin: "app.cash.sqldelight"
-apply plugin: "maven-publish"
+// See :falconer-core — Central publication driven by gradle.properties.
+apply plugin: "com.vanniktech.maven.publish"
 
 // SQLDelight transitively pulls a newer kotlin-stdlib, which conflict-resolution
 // forces onto the whole graph — newer than our pinned Kotlin 2.1.0 compiler. The
@@ -54,12 +55,6 @@ android {
         // Ships the keep rule for the ServiceLoader-discovered engine into any
         // consumer that R8-processes this AAR (RELEASE_STRIPPING.md §3.6).
         consumerProguardFiles "consumer-rules.pro"
-    }
-
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-        }
     }
 
     dependencies {
@@ -128,19 +123,6 @@ sqldelight {
         create("FalconerDb") {
             packageName = "dev.alifhasnain.falconer.data"
             schemaOutputDirectory = file("$projectDir/sqldelight-schemas")
-        }
-    }
-}
-
-afterEvaluate {
-    publishing {
-        publications {
-            release(MavenPublication) {
-                from components.release
-                // groupId inherited from the project group (root build.gradle).
-                artifactId = "falconer-impl"
-                version = falconerVersion
-            }
         }
     }
 }

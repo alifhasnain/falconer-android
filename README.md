@@ -1,6 +1,6 @@
 # falconer-android
 
-[![](https://jitpack.io/v/alifhasnain/falconer-android.svg)](https://jitpack.io/#alifhasnain/falconer-android)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.alifhasnain/falconer-core)](https://central.sonatype.com/artifact/io.github.alifhasnain/falconer-core)
 
 Native Android artifacts for [**Falconer**](https://github.com/alifhasnain/falconer) —
 a Chucker-style HTTP inspector for the Dio client on Flutter.
@@ -21,11 +21,11 @@ the plugin's `RELEASE_STRIPPING.md`.
 
 ## The three artifacts
 
-| Module | Coordinate (JitPack) | Contents |
-|--------|----------------------|----------|
-| `falconer-core` | `com.github.alifhasnain.falconer-android:falconer-core` | The seam: the `FalconerEngine` interface + the Dart↔Kotlin channel contract (`MethodNames` / `PayloadKeys`). Light deps only — coroutines-core + the Android SDK. |
-| `falconer-impl` | `com.github.alifhasnain.falconer-android:falconer-impl` | The full inspector: Compose UI + `FalconerActivity`, SQLDelight DB + repository, notifications, export. Registers `RealFalconerEngine`. Carries the Activity / receiver / provider / `POST_NOTIFICATIONS` manifest entries. |
-| `falconer-noop` | `com.github.alifhasnain.falconer-android:falconer-noop` | The empty mirror: `NoOpFalconerEngine` (every method inert). Depends on `falconer-core` and **nothing else** — no Compose, no SQLDelight, no manifest components. |
+| Module | Coordinate (Maven Central) | Contents |
+|--------|----------------------------|----------|
+| `falconer-core` | `io.github.alifhasnain:falconer-core` | The seam: the `FalconerEngine` interface + the Dart↔Kotlin channel contract (`MethodNames` / `PayloadKeys`). Light deps only — coroutines-core + the Android SDK. |
+| `falconer-impl` | `io.github.alifhasnain:falconer-impl` | The full inspector: Compose UI + `FalconerActivity`, SQLDelight DB + repository, notifications, export. Registers `RealFalconerEngine`. Carries the Activity / receiver / provider / `POST_NOTIFICATIONS` manifest entries. |
+| `falconer-noop` | `io.github.alifhasnain:falconer-noop` | The empty mirror: `NoOpFalconerEngine` (every method inert). Depends on `falconer-core` and **nothing else** — no Compose, no SQLDelight, no manifest components. |
 
 All three ship on **one version, released in lockstep** — the no-op's
 `FalconerEngine` surface must always match core.
@@ -60,19 +60,20 @@ R8 has no live edge to them, and the no-op contributes no manifest components.
 The inspector is gone from the bytes. In **debug**, `falconer-impl` is linked and
 everything works.
 
-## Consuming (JitPack)
+## Consuming (Maven Central)
 
-Add the JitPack repository, then the variant-scoped dependencies:
+Artifacts are on Maven Central, so `mavenCentral()` (already in most projects) is
+the only repository needed:
 
 ```gradle
 repositories {
-    maven { url 'https://jitpack.io' }
+    mavenCentral()
 }
 
 dependencies {
-    api                   "com.github.alifhasnain.falconer-android:falconer-core:0.1.0"
-    debugImplementation   "com.github.alifhasnain.falconer-android:falconer-impl:0.1.0"
-    releaseImplementation "com.github.alifhasnain.falconer-android:falconer-noop:0.1.0"
+    api                   "io.github.alifhasnain:falconer-core:0.1.0"
+    debugImplementation   "io.github.alifhasnain:falconer-impl:0.1.0"
+    releaseImplementation "io.github.alifhasnain:falconer-noop:0.1.0"
 }
 ```
 
@@ -128,17 +129,43 @@ APK Analyzer, or dump `classes*.dex` and grep the type descriptors.
 Pinned toolchain: Kotlin 2.1.0 · AGP 8.9.1 · Gradle 8.12 · SQLDelight 2.2.1 ·
 compileSdk/targetSdk 36 · minSdk 21 · jvmTarget 17.
 
-## Publishing
+## Publishing (Maven Central)
 
-JitPack builds from a Git tag. Push a tag matching `falconerVersion` in
-`gradle.properties`, then trigger the build at
-[jitpack.io/#alifhasnain/falconer-android](https://jitpack.io/#alifhasnain/falconer-android).
-[`jitpack.yml`](jitpack.yml) pins JDK 17 and runs `publishToMavenLocal` for the
-three library modules (the `:app` sample is never published).
+Publishing uses the [vanniktech `maven-publish`](https://github.com/vanniktech/gradle-maven-publish-plugin)
+plugin, driven by the `GROUP` / `VERSION_NAME` / `POM_*` / `SONATYPE_*` properties
+in `gradle.properties`. It builds the signed `.aar` + `-sources.jar` +
+`-javadoc.jar` + POM for each of the three library modules and uploads them to the
+Sonatype **Central Portal** (`SONATYPE_HOST=CENTRAL_PORTAL`). The `:app` sample is
+never published.
 
-> The Gradle `group` is `com.github.alifhasnain.falconer-android` — JitPack requires
-> the `com.github.<user>.<repo>` form so inter-module POM dependencies resolve.
-> Change it in [`build.gradle`](build.gradle) if your GitHub slug differs.
+One-time setup:
+
+1. **Verify the namespace** `io.github.alifhasnain` at
+   [central.sonatype.com](https://central.sonatype.com) (GitHub-ownership check —
+   no domain required). If your GitHub user differs, change `GROUP` in
+   `gradle.properties`.
+2. **GPG key** — generate one, publish the public key to a keyserver.
+3. **Credentials** — put these in `~/.gradle/gradle.properties` (NOT in the repo):
+
+   ```properties
+   mavenCentralUsername=<Central Portal token user>
+   mavenCentralPassword=<Central Portal token>
+   signing.keyId=<last 8 of GPG key id>
+   signing.password=<GPG key passphrase>
+   signing.secretKeyRingFile=<path to secring.gpg>
+   ```
+
+Then release the whole version in lockstep:
+
+```bash
+./gradlew publishAllPublicationsToMavenCentralRepository
+```
+
+Sanity-check the artifacts/POMs locally first, without keys:
+
+```bash
+./gradlew publishToMavenLocal -PRELEASE_SIGNING_ENABLED=false
+```
 
 ## Layout
 
@@ -148,11 +175,10 @@ falconer-android/
 ├── falconer-impl/     full inspector + RealFalconerEngine       (published, debug)
 ├── falconer-noop/     NoOpFalconerEngine                        (published, release)
 ├── app/               sample host + Method A verification       (not published)
-├── jitpack.yml        JDK 17 + publish tasks
-└── gradle.properties  falconerVersion — the single lockstep version
+└── gradle.properties  GROUP / VERSION_NAME + POM/signing config (lockstep version)
 ```
 
 ## License
 
-Same as the parent Falconer plugin. See the
-[Falconer repository](https://github.com/alifhasnain/falconer).
+MIT — see [`LICENSE`](LICENSE). Same license as the parent
+[Falconer plugin](https://github.com/alifhasnain/falconer).

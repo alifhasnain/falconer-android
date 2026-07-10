@@ -43,7 +43,7 @@ android {
         minSdk = 21
         targetSdk = 36
         versionCode = 1
-        versionName = falconerVersion
+        versionName = VERSION_NAME
     }
 
     buildTypes {

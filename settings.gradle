@@ -17,5 +17,6 @@ include ':falconer-noop'
 
 // Sample host — NOT published. Runs the native library without Flutter and
 // doubles as the Method A verification harness (debug=impl, release=noop).
-// jitpack.yml only builds the three library modules, so this never ships.
+// Only the three library modules carry the maven-publish plugin, so :app is
+// never uploaded to Maven Central.
 include ':app'

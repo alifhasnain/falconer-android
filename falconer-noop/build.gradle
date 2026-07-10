@@ -5,7 +5,8 @@
 // references the inspector, and R8 strips it from the release APK.
 apply plugin: "com.android.library"
 apply plugin: "kotlin-android"
-apply plugin: "maven-publish"
+// See :falconer-core — Central publication driven by gradle.properties.
+apply plugin: "com.vanniktech.maven.publish"
 
 android {
     namespace = "dev.alifhasnain.falconer.noop"
@@ -28,27 +29,8 @@ android {
         minSdk = 21
     }
 
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-        }
-    }
-
     dependencies {
         // The seam only — no heavy deps. core re-exports coroutines-core (Flow).
         api project(":falconer-core")
-    }
-}
-
-afterEvaluate {
-    publishing {
-        publications {
-            release(MavenPublication) {
-                from components.release
-                // groupId inherited from the project group (root build.gradle).
-                artifactId = "falconer-noop"
-                version = falconerVersion
-            }
-        }
     }
 }
