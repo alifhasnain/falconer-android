@@ -71,9 +71,9 @@ repositories {
 }
 
 dependencies {
-    api                   "io.github.alifhasnain:falconer-core:0.1.0"
-    debugImplementation   "io.github.alifhasnain:falconer-impl:0.1.0"
-    releaseImplementation "io.github.alifhasnain:falconer-noop:0.1.0"
+    api                   "io.github.alifhasnain:falconer-core:0.2.0"
+    debugImplementation   "io.github.alifhasnain:falconer-impl:0.2.0"
+    releaseImplementation "io.github.alifhasnain:falconer-noop:0.2.0"
 }
 ```
 
