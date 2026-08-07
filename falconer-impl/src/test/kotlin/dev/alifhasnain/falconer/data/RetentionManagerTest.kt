@@ -15,14 +15,19 @@ internal class RetentionManagerTest {
     }
 
     @Test
-    fun forever_neverDeletes() = runTest {
-        val cuts = mutableListOf<Long>()
-        val rm = RetentionManager(MemStore(), { cuts.add(it) }, now = { 1_000_000L })
-            .apply { period = RetentionPeriod.FOREVER }
+    fun everyWindowIsBounded_soCleanupAlwaysSweeps() = runTest {
+        // There is no unbounded window: whatever the host app configures, a sweep
+        // runs and a cutoff is applied.
+        for (period in RetentionPeriod.entries) {
+            val cuts = mutableListOf<Long>()
+            val rm = RetentionManager(MemStore(), { cuts.add(it) }, now = { 10_000_000_000L })
+                .apply { this.period = period }
 
-        rm.cleanupNow()
+            rm.cleanupNow()
 
-        assertTrue(cuts.isEmpty())
+            assertEquals(listOf(10_000_000_000L - period.millis), cuts)
+            assertTrue(period.millis <= RetentionPeriod.ONE_MONTH.millis)
+        }
     }
 
     @Test
@@ -67,15 +72,16 @@ internal class RetentionManagerTest {
         assertEquals(RetentionPeriod.ONE_DAY, RetentionPeriod.fromKey("oneDay"))
         assertEquals(RetentionPeriod.ONE_WEEK, RetentionPeriod.fromKey("oneWeek"))
         assertEquals(RetentionPeriod.ONE_MONTH, RetentionPeriod.fromKey("oneMonth"))
-        assertEquals(RetentionPeriod.FOREVER, RetentionPeriod.fromKey("forever"))
         // Every Dart key must map to a distinct window — a missing branch would
         // silently fall through to ONE_DAY.
         assertEquals(
             RetentionPeriod.entries.size,
-            listOf("oneHour", "oneDay", "oneWeek", "oneMonth", "forever")
+            listOf("oneHour", "oneDay", "oneWeek", "oneMonth")
                 .map { RetentionPeriod.fromKey(it) }.toSet().size,
         )
         assertEquals(RetentionPeriod.ONE_DAY, RetentionPeriod.fromKey(null))
         assertEquals(RetentionPeriod.ONE_DAY, RetentionPeriod.fromKey("bogus"))
+        // The retired key degrades to one day (deletes more), never to "keep all".
+        assertEquals(RetentionPeriod.ONE_DAY, RetentionPeriod.fromKey("forever"))
     }
 }

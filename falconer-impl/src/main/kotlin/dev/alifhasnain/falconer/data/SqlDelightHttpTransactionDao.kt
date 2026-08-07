@@ -63,12 +63,11 @@ internal class SqlDelightHttpTransactionDao(
         queries.findById(id).executeAsOneOrNull()?.toEntity()
     }
 
-    override fun observeAll(): Flow<List<HttpTransactionEntity>> =
-        queries.observeAll().asFlow().mapToList(io).map { rows -> rows.map(Transactions::toEntity) }
+    override fun observeListRows(): Flow<List<TransactionListRow>> =
+        queries.observeListRows(::listRow).asFlow().mapToList(io)
 
-    override fun observeFiltered(query: String): Flow<List<HttpTransactionEntity>> =
-        queries.observeFiltered(query).asFlow().mapToList(io)
-            .map { rows -> rows.map(Transactions::toEntity) }
+    override fun observeListRowsFiltered(query: String): Flow<List<TransactionListRow>> =
+        queries.observeListRowsFiltered(query, ::listRow).asFlow().mapToList(io)
 
     override fun observeById(id: String): Flow<HttpTransactionEntity?> =
         queries.observeById(id).asFlow().mapToOneOrNull(io).map { it?.toEntity() }
@@ -84,6 +83,33 @@ internal class SqlDelightHttpTransactionDao(
         withContext(io) { queries.deleteBefore(threshold) }
     }
 }
+
+/**
+ * Mapper for the projected list queries. The parameter list must match the SELECT
+ * column order in `Transactions.sq` — SQLDelight passes them positionally, and
+ * `statusCode` arrives as the column's `Long?` before narrowing.
+ */
+private fun listRow(
+    id: String,
+    startedAt: Long,
+    tookMs: Long?,
+    method: String,
+    host: String,
+    path: String,
+    statusCode: Long?,
+    responseContentLength: Long?,
+    error: String?,
+) = TransactionListRow(
+    id = id,
+    startedAt = startedAt,
+    tookMs = tookMs,
+    method = method,
+    host = host,
+    path = path,
+    statusCode = statusCode?.toInt(),
+    responseContentLength = responseContentLength,
+    error = error,
+)
 
 /** Maps a generated SQLDelight row to the domain entity. */
 private fun Transactions.toEntity() = HttpTransactionEntity(

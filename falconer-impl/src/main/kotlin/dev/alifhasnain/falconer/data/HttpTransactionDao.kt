@@ -19,9 +19,15 @@ interface HttpTransactionDao {
     /** One-shot read used by the insert-then-update merge path. */
     suspend fun findById(id: String): HttpTransactionEntity?
 
-    fun observeAll(): Flow<List<HttpTransactionEntity>>
+    /**
+     * Narrow projection for the list screen and the notification. Re-emits on
+     * every table write, so it must never carry bodies or the image BLOB — see
+     * [TransactionListRow].
+     */
+    fun observeListRows(): Flow<List<TransactionListRow>>
 
-    fun observeFiltered(query: String): Flow<List<HttpTransactionEntity>>
+    /** As [observeListRows], filtered; the scan still covers url + both bodies. */
+    fun observeListRowsFiltered(query: String): Flow<List<TransactionListRow>>
 
     fun observeById(id: String): Flow<HttpTransactionEntity?>
 

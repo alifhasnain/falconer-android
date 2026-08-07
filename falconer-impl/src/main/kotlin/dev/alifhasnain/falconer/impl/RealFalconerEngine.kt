@@ -57,7 +57,7 @@ class RealFalconerEngine : FalconerEngine {
         // Throttled ongoing notification reflecting live capture.
         notificationHelper = NotificationHelper(context)
         notifJob = scope.launch {
-            repository?.observeAll()?.conflate()?.collect { list ->
+            repository?.observeListRows()?.conflate()?.collect { list ->
                 if (nativeConfig.showNotification && list.isNotEmpty()) {
                     notificationHelper?.show(list, list.size)
                 } else {

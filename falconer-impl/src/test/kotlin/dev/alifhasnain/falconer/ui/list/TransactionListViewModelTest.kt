@@ -2,6 +2,7 @@ package dev.alifhasnain.falconer.ui.list
 
 import dev.alifhasnain.falconer.data.FakeTransactionDao
 import dev.alifhasnain.falconer.data.HttpTransactionEntity
+import dev.alifhasnain.falconer.data.TransactionListRow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -67,7 +68,7 @@ internal class TransactionListViewModelTest {
         assertEquals(listOf("b"), filtered.items().map { it.id })
     }
 
-    private fun TransactionListState.items(): List<HttpTransactionEntity> =
+    private fun TransactionListState.items(): List<TransactionListRow> =
         (this as TransactionListState.Ready).items
 
     private fun entity(id: String, url: String) = HttpTransactionEntity(

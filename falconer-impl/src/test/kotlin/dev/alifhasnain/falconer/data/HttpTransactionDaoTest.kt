@@ -37,10 +37,34 @@ internal class HttpTransactionDaoTest {
         val merged = dao.findById("a")!!.copy(statusCode = 200, responseBody = "ok")
         dao.update(merged)
 
-        val all = dao.observeAll().first()
-        assertEquals(1, all.size)
-        assertEquals(200, all[0].statusCode)
-        assertEquals("ok", all[0].responseBody)
+        val rows = dao.observeListRows().first()
+        assertEquals(1, rows.size)
+        assertEquals(200, rows[0].statusCode)
+        // The body is not in the list projection — read it back through detail.
+        assertEquals("ok", dao.findById("a")!!.responseBody)
+    }
+
+    @Test
+    fun listProjection_carriesOnlyTheColumnsTheListRenders() = runTest {
+        dao.insert(
+            testEntity(
+                "a",
+                startedAt = 100,
+                url = "https://api.example.com/users",
+                path = "/users",
+                requestBody = "req",
+                responseBody = "res",
+            ),
+        )
+
+        val row = dao.observeListRows().first().single()
+
+        assertEquals("a", row.id)
+        assertEquals(100, row.startedAt)
+        assertEquals("GET", row.method)
+        assertEquals("/users", row.path)
+        // Bodies and the image BLOB are absent by construction: TransactionListRow
+        // has no field for them, so a wide read cannot creep back in unnoticed.
     }
 
     @Test
@@ -50,17 +74,24 @@ internal class HttpTransactionDaoTest {
 
         dao.deleteBefore(50)
 
-        assertEquals(setOf("new"), dao.observeAll().first().map { it.id }.toSet())
+        assertEquals(setOf("new"), dao.observeListRows().first().map { it.id }.toSet())
     }
 
     @Test
-    fun observeFiltered_matchesUrlAndBodies() = runTest {
+    fun observeListRowsFiltered_matchesUrlAndBodies() = runTest {
         dao.insert(testEntity("u", url = "https://x/users", requestBody = "needle-in-request"))
         dao.insert(testEntity("p", url = "https://x/posts", responseBody = "needle-in-response"))
         dao.insert(testEntity("z", url = "https://x/zzz"))
 
-        assertEquals(setOf("u", "p"), dao.observeFiltered("%needle%").first().map { it.id }.toSet())
-        assertEquals(setOf("p"), dao.observeFiltered("%posts%").first().map { it.id }.toSet())
+        // Bodies stay searchable even though the projection does not return them.
+        assertEquals(
+            setOf("u", "p"),
+            dao.observeListRowsFiltered("%needle%").first().map { it.id }.toSet(),
+        )
+        assertEquals(
+            setOf("p"),
+            dao.observeListRowsFiltered("%posts%").first().map { it.id }.toSet(),
+        )
     }
 
     @Test
@@ -85,7 +116,7 @@ internal class HttpTransactionDaoTest {
 
             fileDriver = JdbcSqliteDriver(url)
             val reopened = SqlDelightHttpTransactionDao(FalconerDb(fileDriver).transactionsQueries)
-            assertEquals(1, reopened.observeAll().first().size)
+            assertEquals(1, reopened.observeListRows().first().size)
             fileDriver.close()
         } finally {
             file.delete()

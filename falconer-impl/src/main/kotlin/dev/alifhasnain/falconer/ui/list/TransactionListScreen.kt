@@ -41,7 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.alifhasnain.falconer.data.HttpTransactionEntity
+import dev.alifhasnain.falconer.data.TransactionListRow
 import dev.alifhasnain.falconer.ui.common.Format
 import dev.alifhasnain.falconer.ui.common.MethodChip
 import dev.alifhasnain.falconer.ui.common.StatusText
@@ -167,7 +167,7 @@ private fun rememberSkeletonVisible(loading: Boolean): Boolean {
 }
 
 @Composable
-private fun TransactionRow(tx: HttpTransactionEntity, onClick: () -> Unit) {
+private fun TransactionRow(tx: TransactionListRow, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

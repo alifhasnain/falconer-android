@@ -8,7 +8,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import dev.alifhasnain.falconer.data.HttpTransactionEntity
+import dev.alifhasnain.falconer.data.TransactionListRow
 import dev.alifhasnain.falconer.ui.FalconerActivity
 
 /**
@@ -36,7 +36,7 @@ class NotificationHelper(private val context: Context) {
     }
 
     /** Shows/updates the summary. No-ops silently if notifications are disabled. */
-    fun show(recent: List<HttpTransactionEntity>, total: Int) {
+    fun show(recent: List<TransactionListRow>, total: Int) {
         ensureChannel()
 
         val lines = recent.take(MAX_LINES).map(::line)
@@ -84,7 +84,7 @@ class NotificationHelper(private val context: Context) {
         private const val MAX_LINES = 5
 
         /** One summary line for a transaction. Pure; unit-tested. */
-        fun line(tx: HttpTransactionEntity): String {
+        fun line(tx: TransactionListRow): String {
             val status = tx.statusCode?.toString() ?: if (tx.error != null) "ERR" else "···"
             val path = tx.path.ifBlank { "/" }
             return "${tx.method} $path  $status"

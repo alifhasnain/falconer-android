@@ -26,16 +26,20 @@ class FakeTransactionDao : HttpTransactionDao {
 
     override suspend fun findById(id: String): HttpTransactionEntity? = rows[id]
 
-    override fun observeAll(): Flow<List<HttpTransactionEntity>> = all
+    /** Full rows — the fake's own view, used by tests that assert persistence. */
+    fun observeAll(): Flow<List<HttpTransactionEntity>> = all
 
-    override fun observeFiltered(query: String): Flow<List<HttpTransactionEntity>> {
+    override fun observeListRows(): Flow<List<TransactionListRow>> =
+        all.map { list -> list.map(HttpTransactionEntity::toListRow) }
+
+    override fun observeListRowsFiltered(query: String): Flow<List<TransactionListRow>> {
         val needle = query.trim('%')
         return all.map { list ->
             list.filter {
                 it.url.contains(needle) ||
                     (it.requestBody?.contains(needle) ?: false) ||
                     (it.responseBody?.contains(needle) ?: false)
-            }
+            }.map(HttpTransactionEntity::toListRow)
         }
     }
 
@@ -55,3 +59,16 @@ class FakeTransactionDao : HttpTransactionDao {
         publish()
     }
 }
+
+/** The projection SQLDelight does in SQL, done in Kotlin for the fake. */
+internal fun HttpTransactionEntity.toListRow() = TransactionListRow(
+    id = id,
+    startedAt = startedAt,
+    tookMs = tookMs,
+    method = method,
+    host = host,
+    path = path,
+    statusCode = statusCode,
+    responseContentLength = responseContentLength,
+    error = error,
+)

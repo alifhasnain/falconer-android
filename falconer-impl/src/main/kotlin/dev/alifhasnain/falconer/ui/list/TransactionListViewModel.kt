@@ -3,7 +3,7 @@ package dev.alifhasnain.falconer.ui.list
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.alifhasnain.falconer.data.HttpTransactionDao
-import dev.alifhasnain.falconer.data.HttpTransactionEntity
+import dev.alifhasnain.falconer.data.TransactionListRow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
  */
 sealed interface TransactionListState {
     data object Loading : TransactionListState
-    data class Ready(val items: List<HttpTransactionEntity>) : TransactionListState
+    data class Ready(val items: List<TransactionListRow>) : TransactionListState
 }
 
 /** List screen: live transactions, filtered by the search query, plus clear. */
@@ -46,9 +46,9 @@ class TransactionListViewModel(
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<TransactionListState> = _query
         .flatMapLatest { q ->
-            if (q.isBlank()) dao.observeAll() else dao.observeFiltered("%${q.trim()}%")
+            if (q.isBlank()) dao.observeListRows() else dao.observeListRowsFiltered("%${q.trim()}%")
         }
-        .map<List<HttpTransactionEntity>, TransactionListState> { TransactionListState.Ready(it) }
+        .map<List<TransactionListRow>, TransactionListState> { TransactionListState.Ready(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TransactionListState.Loading)
 
     fun setQuery(value: String) {

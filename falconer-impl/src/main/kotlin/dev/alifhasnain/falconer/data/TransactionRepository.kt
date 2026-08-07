@@ -18,9 +18,9 @@ class TransactionRepository(
     private val retention: RetentionManager,
     private val config: () -> FalconerNativeConfig = { FalconerNativeConfig.DEFAULT },
 ) {
-    fun observeAll(): Flow<List<HttpTransactionEntity>> = dao.observeAll()
-    fun observeFiltered(query: String): Flow<List<HttpTransactionEntity>> =
-        dao.observeFiltered(query)
+    fun observeListRows(): Flow<List<TransactionListRow>> = dao.observeListRows()
+    fun observeListRowsFiltered(query: String): Flow<List<TransactionListRow>> =
+        dao.observeListRowsFiltered(query)
     fun observeById(id: String): Flow<HttpTransactionEntity?> = dao.observeById(id)
     fun observeCount(): Flow<Int> = dao.observeCount()
 

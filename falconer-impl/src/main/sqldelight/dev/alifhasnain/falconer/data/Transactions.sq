@@ -51,11 +51,25 @@ INSERT OR REPLACE INTO transactions(
 findById:
 SELECT * FROM transactions WHERE id = ?;
 
-observeAll:
-SELECT * FROM transactions ORDER BY startedAt DESC;
+-- Projection for the list screen and the ongoing notification — the only columns
+-- those two surfaces render.
+--
+-- Deliberately NOT `SELECT *`: the wide row carries requestBody, responseBody and
+-- the responseImageBytes BLOB, each capped at `maxContentLength` (250 KB by
+-- default). These queries re-run on every write to the table, so selecting the
+-- wide row means re-reading up to half a megabyte per transaction for a list that
+-- shows nine short fields. Detail reads (`findById` / `observeById`) still take
+-- the full row — that is the one screen which actually renders bodies.
+observeListRows:
+SELECT id, startedAt, tookMs, method, host, path, statusCode, responseContentLength, error
+FROM transactions
+ORDER BY startedAt DESC;
 
-observeFiltered:
-SELECT * FROM transactions
+-- Same projection; the filter still scans url + both bodies (they are searchable
+-- even though they are not returned).
+observeListRowsFiltered:
+SELECT id, startedAt, tookMs, method, host, path, statusCode, responseContentLength, error
+FROM transactions
 WHERE url LIKE :query OR requestBody LIKE :query OR responseBody LIKE :query
 ORDER BY startedAt DESC;
 

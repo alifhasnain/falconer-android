@@ -1,6 +1,6 @@
 package dev.alifhasnain.falconer.notification
 
-import dev.alifhasnain.falconer.data.HttpTransactionEntity
+import dev.alifhasnain.falconer.data.TransactionListRow
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -11,14 +11,10 @@ internal class NotificationHelperTest {
         path: String = "/users",
         statusCode: Int? = null,
         error: String? = null,
-    ) = HttpTransactionEntity(
-        id = "1", startedAt = 0, completedAt = null, tookMs = null,
-        method = method, url = "https://x$path", host = "x", path = path, scheme = "https",
-        protocol = null, requestHeaders = "{}", requestContentType = null,
-        requestContentLength = null, requestBody = null, requestBodyKind = "none",
-        statusCode = statusCode, statusMessage = null, responseHeaders = null,
-        responseContentType = null, responseContentLength = null, responseBody = null,
-        responseBodyKind = null, responseImageBytes = null, error = error,
+    ) = TransactionListRow(
+        id = "1", startedAt = 0, tookMs = null,
+        method = method, host = "x", path = path,
+        statusCode = statusCode, responseContentLength = null, error = error,
     )
 
     @Test

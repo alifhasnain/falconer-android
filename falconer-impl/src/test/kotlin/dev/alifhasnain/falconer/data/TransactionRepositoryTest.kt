@@ -20,12 +20,13 @@ internal class TransactionRepositoryTest {
     }
 
     private fun repo(dao: FakeTransactionDao): TransactionRepository {
-        // now()=0 + FOREVER keeps retention from deleting anything mid-test.
+        // now()=0 pushes every cutoff negative, so retention deletes nothing
+        // mid-test (there is no unbounded window to lean on any more).
         val retention = RetentionManager(
             lastCleanup = MemStore(),
             deleteBefore = dao::deleteBefore,
             now = { 0L },
-        ).apply { period = RetentionPeriod.FOREVER }
+        ).apply { period = RetentionPeriod.ONE_MONTH }
         return TransactionRepository(dao, retention)
     }
 
