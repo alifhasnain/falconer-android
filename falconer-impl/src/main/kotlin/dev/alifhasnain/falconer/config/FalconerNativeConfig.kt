@@ -6,8 +6,12 @@ import dev.alifhasnain.falconer.data.RetentionPeriod
  * Native-side configuration parsed from the `configure` channel map.
  *
  * Redaction and truncation already happen in Dart before the payload crosses
- * the channel (D2); this enforces them again as a defense-in-depth backstop so
- * a misbehaving caller cannot persist secrets or oversized bodies.
+ * the channel; this enforces them again as a defense-in-depth backstop so a
+ * misbehaving caller cannot persist secrets or oversized bodies.
+ *
+ * [enabled] is the resolved `effectiveEnabled` from Dart. `RealFalconerEngine`
+ * drops every ingest while it is `false`, so capture can be switched off from
+ * Dart without relying on the interceptor's own short-circuit.
  */
 data class FalconerNativeConfig(
     val enabled: Boolean,
@@ -43,8 +47,25 @@ data class FalconerNativeConfig(
             "x-auth-token",
         )
 
+        /**
+         * The pre-`configure` fallback, used only until the first `configure`
+         * map arrives. Mirrors iOS `FalconerNativeConfig.defaults`.
+         *
+         * `enabled = true` so capture works for a consumer who adds the
+         * interceptor but never calls `Falconer.configure()`. That is safe
+         * because this artifact (`falconer-impl`) is linked in DEBUG builds only
+         * — a release build links `falconer-noop` and contains none of this.
+         *
+         * Note this differs from [fromMap]'s own `enabled` fallback, which is
+         * `false`: an explicit but malformed `configure` map should fail closed,
+         * whereas "no configure yet" in a debug-only artifact should capture.
+         *
+         * Redaction and retention stay conservative here so anything captured
+         * before `configure` lands is masked with the strong default set and
+         * swept on the short window.
+         */
         val DEFAULT = FalconerNativeConfig(
-            enabled = false,
+            enabled = true,
             redactHeaders = DEFAULT_REDACT,
             maxContentLength = 250_000,
             retention = RetentionPeriod.ONE_DAY,

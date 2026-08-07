@@ -9,6 +9,22 @@ import kotlin.test.assertTrue
 internal class FalconerNativeConfigTest {
 
     @Test
+    fun default_capturesBeforeConfigureArrives() {
+        // RealFalconerEngine now drops ingests while `enabled` is false, so the
+        // pre-configure fallback must capture — otherwise a consumer who never
+        // calls Falconer.configure() would see an empty inspector. Safe because
+        // falconer-impl is linked in debug builds only. Mirrors iOS defaults.
+        assertTrue(FalconerNativeConfig.DEFAULT.enabled)
+    }
+
+    @Test
+    fun fromMap_missingEnabled_failsClosed() {
+        // An explicit but malformed configure map is different from "no configure
+        // yet": it must fail closed rather than inherit DEFAULT's true.
+        assertEquals(false, FalconerNativeConfig.fromMap(hashMapOf<String, Any?>()).enabled)
+    }
+
+    @Test
     fun redact_masksMatchedHeadersCaseInsensitively() {
         val cfg = FalconerNativeConfig.DEFAULT
         val headers = mapOf(

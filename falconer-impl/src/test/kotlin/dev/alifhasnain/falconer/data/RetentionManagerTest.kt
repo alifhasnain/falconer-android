@@ -66,7 +66,15 @@ internal class RetentionManagerTest {
         assertEquals(RetentionPeriod.ONE_HOUR, RetentionPeriod.fromKey("oneHour"))
         assertEquals(RetentionPeriod.ONE_DAY, RetentionPeriod.fromKey("oneDay"))
         assertEquals(RetentionPeriod.ONE_WEEK, RetentionPeriod.fromKey("oneWeek"))
+        assertEquals(RetentionPeriod.ONE_MONTH, RetentionPeriod.fromKey("oneMonth"))
         assertEquals(RetentionPeriod.FOREVER, RetentionPeriod.fromKey("forever"))
+        // Every Dart key must map to a distinct window — a missing branch would
+        // silently fall through to ONE_DAY.
+        assertEquals(
+            RetentionPeriod.entries.size,
+            listOf("oneHour", "oneDay", "oneWeek", "oneMonth", "forever")
+                .map { RetentionPeriod.fromKey(it) }.toSet().size,
+        )
         assertEquals(RetentionPeriod.ONE_DAY, RetentionPeriod.fromKey(null))
         assertEquals(RetentionPeriod.ONE_DAY, RetentionPeriod.fromKey("bogus"))
     }

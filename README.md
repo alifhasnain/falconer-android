@@ -2,7 +2,7 @@
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.alifhasnain/falconer-core)](https://central.sonatype.com/artifact/io.github.alifhasnain/falconer-core)
 
-Native Android artifacts for [**Falconer**](https://github.com/alifhasnain/falconer) —
+Native Android artifacts for [**Falconer**](https://github.com/alifhasnain/falconer-flutter) —
 a Chucker-style HTTP inspector for the Dio client on Flutter.
 
 This repo exists for one reason: to make Falconer's inspector — its Compose UI,
@@ -181,4 +181,4 @@ falconer-android/
 ## License
 
 MIT — see [`LICENSE`](LICENSE). Same license as the parent
-[Falconer plugin](https://github.com/alifhasnain/falconer).
+[Falconer plugin](https://github.com/alifhasnain/falconer-flutter).

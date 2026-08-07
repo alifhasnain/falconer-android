@@ -2,22 +2,35 @@ package dev.alifhasnain.falconer.data
 
 import android.content.Context
 
-/** Retention windows (D6). `FOREVER` never deletes. */
+/**
+ * Retention windows. `FOREVER` never deletes.
+ *
+ * Rolling durations measured back from now, not calendar units: `ONE_MONTH` is a
+ * fixed 30 days. Mirrors Dart `RetentionPeriod` and Swift `RetentionWindow` —
+ * all three must gain a value together (see [fromKey]).
+ */
 enum class RetentionPeriod(val millis: Long?) {
     ONE_HOUR(3_600_000L),
     ONE_DAY(86_400_000L),
     ONE_WEEK(604_800_000L),
+    ONE_MONTH(2_592_000_000L), // 30 days
     FOREVER(null);
 
     /** Cutoff timestamp: rows older than this are stale. Null means keep all. */
     fun cutoffOrNull(now: Long): Long? = millis?.let { now - it }
 
     companion object {
-        /** Maps the Dart `RetentionPeriod` enum key; falls back to [ONE_DAY]. */
+        /**
+         * Maps the Dart `RetentionPeriod` enum key; falls back to [ONE_DAY].
+         *
+         * The fallback is SILENT, so a key Dart sends but this map lacks would
+         * sweep at one day with no error. Keep in step with Dart's enum.
+         */
         fun fromKey(key: String?): RetentionPeriod = when (key) {
             "oneHour" -> ONE_HOUR
             "oneDay" -> ONE_DAY
             "oneWeek" -> ONE_WEEK
+            "oneMonth" -> ONE_MONTH
             "forever" -> FOREVER
             else -> ONE_DAY
         }

@@ -82,14 +82,17 @@ class RealFalconerEngine : FalconerEngine {
     }
 
     override fun logRequest(args: Map<*, *>) {
+        if (!nativeConfig.enabled) return
         scope.launch { repository?.logRequest(PayloadMapper.parseRequest(args)) }
     }
 
     override fun logResponse(args: Map<*, *>) {
+        if (!nativeConfig.enabled) return
         scope.launch { repository?.logResponse(PayloadMapper.parseResponse(args)) }
     }
 
     override fun logError(args: Map<*, *>) {
+        if (!nativeConfig.enabled) return
         scope.launch { repository?.logError(PayloadMapper.parseError(args)) }
     }
 
