@@ -1,5 +1,8 @@
 package dev.alifhasnain.falconer.ui.list
 
+import android.os.SystemClock
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,6 +30,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +47,17 @@ import dev.alifhasnain.falconer.ui.common.MethodChip
 import dev.alifhasnain.falconer.ui.common.StatusText
 import dev.alifhasnain.falconer.ui.theme.FalconerColors
 import dev.alifhasnain.falconer.ui.theme.MonoStyle
+import kotlinx.coroutines.delay
+
+/**
+ * How long the screen may stay loading before the skeleton appears. Under this,
+ * the data wins the race and no placeholder is ever drawn — a one-frame flash of
+ * shimmer is noise, not polish.
+ */
+private const val SKELETON_GRACE_MS = 120L
+
+/** Once shown, the skeleton holds this long so it reads as a state, not a blink. */
+private const val SKELETON_MIN_HOLD_MS = 320L
 
 @androidx.compose.material3.ExperimentalMaterial3Api
 @Composable
@@ -50,9 +65,12 @@ fun TransactionListScreen(
     viewModel: TransactionListViewModel,
     onOpen: (String) -> Unit,
 ) {
-    val items by viewModel.transactions.collectAsStateWithLifecycle()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     var confirmClear by remember { mutableStateOf(false) }
+
+    val items = (state as? TransactionListState.Ready)?.items.orEmpty()
+    val showSkeleton = rememberSkeletonVisible(state is TransactionListState.Loading)
 
     Scaffold(
         containerColor = FalconerColors.Background,
@@ -87,13 +105,19 @@ fun TransactionListScreen(
             )
             HorizontalDivider(color = FalconerColors.Outline)
 
-            if (items.isEmpty()) {
-                EmptyState(searching = query.isNotBlank())
-            } else {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(items, key = { it.id }) { tx ->
-                        TransactionRow(tx, onClick = { onOpen(tx.id) })
-                        HorizontalDivider(color = FalconerColors.Outline)
+            Crossfade(
+                targetState = showSkeleton,
+                animationSpec = tween(durationMillis = 180),
+                label = "listContent",
+            ) { skeleton ->
+                when {
+                    skeleton -> TransactionListSkeleton()
+                    items.isEmpty() -> EmptyState(searching = query.isNotBlank())
+                    else -> LazyColumn(Modifier.fillMaxSize()) {
+                        items(items, key = { it.id }) { tx ->
+                            TransactionRow(tx, onClick = { onOpen(tx.id) })
+                            HorizontalDivider(color = FalconerColors.Outline)
+                        }
                     }
                 }
             }
@@ -113,6 +137,33 @@ fun TransactionListScreen(
             },
         )
     }
+}
+
+/**
+ * Debounces [loading] into skeleton visibility: nothing for the first
+ * [SKELETON_GRACE_MS] (fast loads never flash), and once shown it holds for at
+ * least [SKELETON_MIN_HOLD_MS] so the transition is legible rather than a stutter.
+ *
+ * Cancellation of the previous [LaunchedEffect] does the work — if loading ends
+ * inside the grace window the pending "show" coroutine is cancelled before it fires.
+ */
+@Composable
+private fun rememberSkeletonVisible(loading: Boolean): Boolean {
+    var visible by remember { mutableStateOf(false) }
+    var shownAt by remember { mutableStateOf(0L) }
+
+    LaunchedEffect(loading) {
+        if (loading) {
+            delay(SKELETON_GRACE_MS)
+            shownAt = SystemClock.uptimeMillis()
+            visible = true
+        } else if (visible) {
+            val elapsed = SystemClock.uptimeMillis() - shownAt
+            if (elapsed < SKELETON_MIN_HOLD_MS) delay(SKELETON_MIN_HOLD_MS - elapsed)
+            visible = false
+        }
+    }
+    return visible
 }
 
 @Composable

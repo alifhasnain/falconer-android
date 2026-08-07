@@ -2,6 +2,7 @@ package dev.alifhasnain.falconer.ui
 
 import android.content.Context
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -12,6 +13,7 @@ import dev.alifhasnain.falconer.data.FalconerDb
 import dev.alifhasnain.falconer.data.HttpTransactionDao
 import dev.alifhasnain.falconer.data.SqlDelightHttpTransactionDao
 import dev.alifhasnain.falconer.data.testEntity
+import dev.alifhasnain.falconer.ui.common.LocalShimmerAnimationEnabled
 import dev.alifhasnain.falconer.ui.detail.BodySection
 import dev.alifhasnain.falconer.ui.list.TransactionListScreen
 import dev.alifhasnain.falconer.ui.list.TransactionListViewModel
@@ -44,7 +46,14 @@ class ComposeUiTest {
         }
         val vm = TransactionListViewModel(dao)
 
-        rule.setContent { FalconerTheme { TransactionListScreen(vm, onOpen = {}) } }
+        // The loading skeleton's sweep is an infinite animation — under the test
+        // clock it would keep the idling resource busy forever, exactly like the
+        // blinking cursor noted below. Render the placeholders static instead.
+        rule.setContent {
+            CompositionLocalProvider(LocalShimmerAnimationEnabled provides false) {
+                FalconerTheme { TransactionListScreen(vm, onOpen = {}) }
+            }
+        }
 
         rule.onNodeWithText("/users").assertIsDisplayed()
         rule.onNodeWithText("/posts").assertIsDisplayed()

@@ -65,6 +65,9 @@ android {
         // Compose BOM — single source of truth for Compose artifact versions.
         implementation platform("androidx.compose:compose-bom:2024.09.02")
         implementation "androidx.compose.runtime:runtime"
+        // Crossfade + the infinite transition behind the list-loading shimmer.
+        // Declared explicitly rather than leaned on transitively via material3.
+        implementation "androidx.compose.animation:animation"
         implementation "androidx.compose.ui:ui"
         implementation "androidx.compose.ui:ui-graphics"
         implementation "androidx.compose.material3:material3"
