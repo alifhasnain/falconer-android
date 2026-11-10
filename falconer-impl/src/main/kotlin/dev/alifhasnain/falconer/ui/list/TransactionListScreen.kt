@@ -188,52 +188,46 @@ private fun rememberSkeletonVisible(loading: Boolean): Boolean {
 
 @Composable
 private fun TransactionRow(tx: TransactionListRow, onClick: () -> Unit) {
-    Row(
+    // Two lines, each split left/right: path | status, then host | timing · size.
+    // The right-hand values share the row's right edge; the left text takes the
+    // rest and ellipsizes first, so a long path or host never hides them.
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                MethodChip(tx.method)
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    tx.path.ifBlank { "/" },
-                    style = MonoStyle.copy(fontWeight = FontWeight.Medium),
-                    color = FalconerColors.Ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Spacer(Modifier.width(0.dp))
-            // Timing/size share the host line so the path above gets the row's width.
-            // Host gives way first (fill = false) so a long one never hides them.
-            Row {
-                Text(
-                    tx.host,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = FalconerColors.InkSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Text(
-                    buildString {
-                        append("  ·  ")
-                        append(Format.duration(tx.tookMs))
-                        append("  ·  ")
-                        append(Format.size(tx.responseContentLength))
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = FalconerColors.InkSecondary,
-                    maxLines = 1,
-                )
-            }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MethodChip(tx.method)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                tx.path.ifBlank { "/" },
+                style = MonoStyle.copy(fontWeight = FontWeight.Medium),
+                color = FalconerColors.Ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(12.dp))
+            StatusText(tx.statusCode, tx.error)
         }
-        Spacer(Modifier.width(12.dp))
-        StatusText(tx.statusCode, tx.error)
+        Row {
+            Text(
+                tx.host,
+                style = MaterialTheme.typography.labelSmall,
+                color = FalconerColors.InkSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "${Format.duration(tx.tookMs)} · ${Format.size(tx.responseContentLength)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = FalconerColors.InkSecondary,
+                maxLines = 1,
+            )
+        }
     }
 }
 
