@@ -25,7 +25,10 @@ configurations.all {
 }
 
 android {
-    namespace = "dev.alifhasnain.falconer"
+    // Own namespace, like falconer-core / falconer-noop: the Flutter plugin
+    // module already uses dev.alifhasnain.falconer, and AGP 9 fails the app's
+    // manifest merge when two libraries share one.
+    namespace = "dev.alifhasnain.falconer.impl"
 
     compileSdk = 36
 

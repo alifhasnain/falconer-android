@@ -4,15 +4,17 @@
      the whole exercise (RELEASE_STRIPPING.md §3.3). The no-op declares none of
      them, so a release build's merged manifest has no inspector entries.
 
-     Namespace (dev.alifhasnain.falconer) comes from build.gradle, so the relative
-     `.ui.*` / `.notification.*` names below resolve to the real classes. -->
+     Class names are fully qualified on purpose: the namespace
+     (dev.alifhasnain.falconer.impl) is not the classes' package
+     (dev.alifhasnain.falconer.*), so relative `.ui.*` names would resolve to
+     classes that don't exist. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application>
         <activity
-            android:name=".ui.FalconerActivity"
+            android:name="dev.alifhasnain.falconer.ui.FalconerActivity"
             android:taskAffinity="dev.alifhasnain.falconer"
             android:launchMode="singleTask"
             android:exported="false"
@@ -20,7 +22,7 @@
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
 
         <receiver
-            android:name=".notification.FalconerClearReceiver"
+            android:name="dev.alifhasnain.falconer.notification.FalconerClearReceiver"
             android:exported="false" />
 
         <provider
