@@ -110,6 +110,11 @@ android {
     }
 
     testOptions {
+        // The instrumented-test APK otherwise targets minSdk (21), and Android
+        // then puts a legacy permission-review screen over the test activity,
+        // which hangs every Compose test waiting for a frame.
+        targetSdk = 36
+
         unitTests.all {
             useJUnitPlatform()
 

@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
@@ -35,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -48,6 +51,7 @@ import dev.alifhasnain.falconer.ui.common.StatusText
 import dev.alifhasnain.falconer.ui.theme.FalconerColors
 import dev.alifhasnain.falconer.ui.theme.MonoStyle
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filter
 
 /**
  * How long the screen may stay loading before the skeleton appears. Under this,
@@ -64,6 +68,7 @@ private const val SKELETON_MIN_HOLD_MS = 320L
 fun TransactionListScreen(
     viewModel: TransactionListViewModel,
     onOpen: (String) -> Unit,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
@@ -71,6 +76,21 @@ fun TransactionListScreen(
 
     val items = (state as? TransactionListState.Ready)?.items.orEmpty()
     val showSkeleton = rememberSkeletonVisible(state is TransactionListState.Loading)
+
+    // Newest rows arrive at index 0, but LazyColumn holds on to the first visible
+    // key, so a new row would land off-screen above it. At the top: follow the
+    // newest row. Scrolled down: stay put. Re-evaluated whenever a scroll ends,
+    // and reset when the list empties (a clear leaves no position to keep).
+    var followNewest by remember { mutableStateOf(listState.firstVisibleItemIndex == 0) }
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress }
+            .filter { !it }
+            .collect { followNewest = listState.firstVisibleItemIndex == 0 }
+    }
+    LaunchedEffect(items.firstOrNull()?.id) {
+        if (items.isEmpty()) followNewest = true
+        else if (followNewest) listState.scrollToItem(0)
+    }
 
     Scaffold(
         containerColor = FalconerColors.Background,
@@ -113,7 +133,7 @@ fun TransactionListScreen(
                 when {
                     skeleton -> TransactionListSkeleton()
                     items.isEmpty() -> EmptyState(searching = query.isNotBlank())
-                    else -> LazyColumn(Modifier.fillMaxSize()) {
+                    else -> LazyColumn(Modifier.fillMaxSize(), state = listState) {
                         items(items, key = { it.id }) { tx ->
                             TransactionRow(tx, onClick = { onOpen(tx.id) })
                             HorizontalDivider(color = FalconerColors.Outline)
@@ -188,27 +208,32 @@ private fun TransactionRow(tx: TransactionListRow, onClick: () -> Unit) {
                 )
             }
             Spacer(Modifier.width(0.dp))
-            Text(
-                tx.host,
-                style = MaterialTheme.typography.labelSmall,
-                color = FalconerColors.InkSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // Timing/size share the host line so the path above gets the row's width.
+            // Host gives way first (fill = false) so a long one never hides them.
+            Row {
+                Text(
+                    tx.host,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = FalconerColors.InkSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Text(
+                    buildString {
+                        append("  ·  ")
+                        append(Format.duration(tx.tookMs))
+                        append("  ·  ")
+                        append(Format.size(tx.responseContentLength))
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = FalconerColors.InkSecondary,
+                    maxLines = 1,
+                )
+            }
         }
         Spacer(Modifier.width(12.dp))
-        Column(horizontalAlignment = Alignment.End) {
-            StatusText(tx.statusCode, tx.error)
-            Text(
-                buildString {
-                    append(Format.duration(tx.tookMs))
-                    append("  ·  ")
-                    append(Format.size(tx.responseContentLength))
-                },
-                style = MaterialTheme.typography.labelSmall,
-                color = FalconerColors.InkSecondary,
-            )
-        }
+        StatusText(tx.statusCode, tx.error)
     }
 }
 

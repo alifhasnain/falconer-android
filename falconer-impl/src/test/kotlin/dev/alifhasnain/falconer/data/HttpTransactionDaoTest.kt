@@ -95,6 +95,16 @@ internal class HttpTransactionDaoTest {
     }
 
     @Test
+    fun observeRecent_returnsNewestRowsOnly() = runTest {
+        (1..8).forEach { dao.insert(testEntity("t$it", startedAt = it.toLong())) }
+
+        assertEquals(
+            listOf("t8", "t7", "t6"),
+            dao.observeRecent(3).first().map { it.id },
+        )
+    }
+
+    @Test
     fun observeCount_tracksRowCount() = runTest {
         assertEquals(0, dao.observeCount().first())
         dao.insert(testEntity("a"))

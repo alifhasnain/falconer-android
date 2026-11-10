@@ -43,6 +43,9 @@ class FakeTransactionDao : HttpTransactionDao {
         }
     }
 
+    override fun observeRecent(limit: Long): Flow<List<TransactionListRow>> =
+        all.map { list -> list.take(limit.toInt()).map(HttpTransactionEntity::toListRow) }
+
     override fun observeById(id: String): Flow<HttpTransactionEntity?> =
         all.map { list -> list.firstOrNull { it.id == id } }
 

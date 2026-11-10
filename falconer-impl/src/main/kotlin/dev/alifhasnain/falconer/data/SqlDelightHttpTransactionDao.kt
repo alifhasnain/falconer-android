@@ -69,6 +69,9 @@ internal class SqlDelightHttpTransactionDao(
     override fun observeListRowsFiltered(query: String): Flow<List<TransactionListRow>> =
         queries.observeListRowsFiltered(query, ::listRow).asFlow().mapToList(io)
 
+    override fun observeRecent(limit: Long): Flow<List<TransactionListRow>> =
+        queries.observeRecent(limit, ::listRow).asFlow().mapToList(io)
+
     override fun observeById(id: String): Flow<HttpTransactionEntity?> =
         queries.observeById(id).asFlow().mapToOneOrNull(io).map { it?.toEntity() }
 

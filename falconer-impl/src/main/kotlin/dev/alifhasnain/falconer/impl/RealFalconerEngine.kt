@@ -17,6 +17,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -56,10 +57,16 @@ class RealFalconerEngine : FalconerEngine {
 
         // Throttled ongoing notification reflecting live capture.
         notificationHelper = NotificationHelper(context)
+        // Newest few rows + COUNT(*), not the whole list: this re-queries on every
+        // capture write, so its cost must not grow with the number of rows kept.
+        val repo = repository ?: return
         notifJob = scope.launch {
-            repository?.observeListRows()?.conflate()?.collect { list ->
-                if (nativeConfig.showNotification && list.isNotEmpty()) {
-                    notificationHelper?.show(list, list.size)
+            combine(
+                repo.observeRecent(NotificationHelper.MAX_LINES.toLong()),
+                repo.observeCount(),
+            ) { recent, total -> recent to total }.conflate().collect { (recent, total) ->
+                if (nativeConfig.showNotification && total > 0) {
+                    notificationHelper?.show(recent, total)
                 } else {
                     notificationHelper?.dismiss()
                 }

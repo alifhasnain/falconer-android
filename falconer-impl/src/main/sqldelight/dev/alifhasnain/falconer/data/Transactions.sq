@@ -73,6 +73,14 @@ FROM transactions
 WHERE url LIKE :query OR requestBody LIKE :query OR responseBody LIKE :query
 ORDER BY startedAt DESC;
 
+-- Same projection, newest N only: the notification shows five lines, so it must
+-- not re-read the whole table on every write (count comes from observeCount).
+observeRecent:
+SELECT id, startedAt, tookMs, method, host, path, statusCode, responseContentLength, error
+FROM transactions
+ORDER BY startedAt DESC
+LIMIT :limit;
+
 observeById:
 SELECT * FROM transactions WHERE id = ?;
 

@@ -32,12 +32,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -49,6 +51,8 @@ import dev.alifhasnain.falconer.ui.common.JsonFormatter
 import dev.alifhasnain.falconer.ui.common.MutedNote
 import dev.alifhasnain.falconer.ui.theme.FalconerColors
 import dev.alifhasnain.falconer.ui.theme.MonoStyle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Renders a captured body: an image preview on the image path, otherwise the
@@ -68,11 +72,16 @@ fun BodySection(
         return
     }
 
-    val text = remember(body, bodyKind) {
-        if (bodyKind == "json") JsonFormatter.format(body) else (body ?: "")
+    // Pretty-printing a body near maxContentLength takes long enough to drop
+    // frames, so it runs off the main thread; null until it is ready.
+    val text by produceState<String?>(null, body, bodyKind) {
+        value = withContext(Dispatchers.Default) {
+            if (bodyKind == "json") JsonFormatter.format(body) else (body ?: "")
+        }
     }
 
-    if (text.isBlank()) {
+    val ready = text ?: return
+    if (ready.isBlank()) {
         MutedNote("(no body)", modifier)
         return
     }
@@ -81,7 +90,7 @@ fun BodySection(
         append(bodyKind ?: "body")
         if (!contentType.isNullOrBlank()) append("  ·  ").also { append(contentType) }
     }
-    SearchableBody(text, caption, modifier)
+    SearchableBody(ready, caption, modifier)
 }
 
 @Composable
@@ -221,10 +230,15 @@ private fun InBodySearchBar(
 
 @Composable
 private fun ImagePreview(bytes: ByteArray, modifier: Modifier) {
-    // D8: plain BitmapFactory -> asImageBitmap, no Coil dependency.
-    val bitmap = remember(bytes) {
-        runCatching { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }.getOrNull()
+    // D8: plain BitmapFactory -> asImageBitmap, no Coil dependency. Decoded off
+    // the main thread; Result is null until done, then holds the bitmap or null.
+    val decoded by produceState<Result<ImageBitmap?>?>(null, bytes) {
+        value = withContext(Dispatchers.Default) {
+            runCatching { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }
+        }
     }
+    val result = decoded ?: return
+    val bitmap = result.getOrNull()
     if (bitmap == null) {
         MutedNote("[image could not be decoded]", modifier)
         return

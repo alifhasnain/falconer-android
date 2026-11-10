@@ -29,6 +29,9 @@ interface HttpTransactionDao {
     /** As [observeListRows], filtered; the scan still covers url + both bodies. */
     fun observeListRowsFiltered(query: String): Flow<List<TransactionListRow>>
 
+    /** As [observeListRows], newest [limit] rows only (the notification). */
+    fun observeRecent(limit: Long): Flow<List<TransactionListRow>>
+
     fun observeById(id: String): Flow<HttpTransactionEntity?>
 
     fun observeCount(): Flow<Int>

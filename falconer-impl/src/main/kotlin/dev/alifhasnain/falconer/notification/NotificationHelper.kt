@@ -9,6 +9,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import dev.alifhasnain.falconer.data.TransactionListRow
+import dev.alifhasnain.falconer.impl.R
 import dev.alifhasnain.falconer.ui.FalconerActivity
 
 /**
@@ -44,8 +45,9 @@ class NotificationHelper(private val context: Context) {
         lines.forEach(style::addLine)
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            // Platform icon for v1; a custom monochrome icon is future polish.
-            .setSmallIcon(android.R.drawable.stat_sys_download_done)
+            .setSmallIcon(R.drawable.falconer_ic_notification)
+            // Brand accent for the icon/header in the expanded shade (status bar stays monochrome).
+            .setColor(ACCENT_COLOR)
             .setContentTitle("Falconer · $total captured")
             .setContentText(lines.firstOrNull() ?: "Capturing…")
             .setStyle(style)
@@ -81,7 +83,10 @@ class NotificationHelper(private val context: Context) {
         const val CHANNEL_ID = "falconer_traffic"
         const val NOTIFICATION_ID = 0xFA1C
 
-        private const val MAX_LINES = 5
+        const val MAX_LINES = 5
+
+        // FalconerColors.Accent; kept as an ARGB int so this file stays Compose-free.
+        private const val ACCENT_COLOR = 0xFF3457D5.toInt()
 
         /** One summary line for a transaction. Pure; unit-tested. */
         fun line(tx: TransactionListRow): String {

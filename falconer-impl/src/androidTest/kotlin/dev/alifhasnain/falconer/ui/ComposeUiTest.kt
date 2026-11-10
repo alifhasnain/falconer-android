@@ -1,11 +1,15 @@
 package dev.alifhasnain.falconer.ui
 
 import android.content.Context
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
@@ -68,6 +72,62 @@ class ComposeUiTest {
         rule.onNodeWithText("/users").assertDoesNotExist()
     }
 
+    // Lists here are longer than the screen on purpose: a list that fits on screen
+    // is always drawn from the top, which would hide the anchoring being tested.
+    private fun seedRows(dao: HttpTransactionDao, prefix: String, startedAt: IntRange) = runBlocking {
+        startedAt.forEach { dao.insert(testEntity("$prefix$it", startedAt = it.toLong(), path = "/$prefix$it")) }
+    }
+
+    @Test
+    fun list_followsNewestRowWhileAtTop() {
+        val dao = inMemoryDao()
+        seedRows(dao, "row", 1..40)
+        val vm = TransactionListViewModel(dao)
+        setList(vm, LazyListState())
+        awaitText("/row40")
+
+        // Without following, the list stays anchored on "/row40" and the new row
+        // lands off-screen above it.
+        runBlocking { dao.insert(testEntity("n", startedAt = 100, path = "/newest")) }
+        awaitText("/newest")
+        rule.onNodeWithText("/newest").assertIsDisplayed()
+    }
+
+    @Test
+    fun list_followsNewestAgainAfterClearWhileScrolledDown() {
+        val dao = inMemoryDao()
+        seedRows(dao, "row", 1..40)
+        val vm = TransactionListViewModel(dao)
+        setList(vm, LazyListState())
+        awaitText("/row40")
+
+        // Scrolled down: following is off. A clear must turn it back on.
+        rule.onNode(hasScrollToIndexAction()).performScrollToIndex(20)
+        rule.waitForIdle()
+        vm.clear()
+        awaitText("No transactions captured yet")
+
+        seedRows(dao, "new", 100..139)
+        awaitText("/new139")
+        rule.onNodeWithText("/new139").assertIsDisplayed()
+    }
+
+    private fun setList(vm: TransactionListViewModel, listState: LazyListState) {
+        rule.setContent {
+            CompositionLocalProvider(LocalShimmerAnimationEnabled provides false) {
+                FalconerTheme { TransactionListScreen(vm, onOpen = {}, listState = listState) }
+            }
+        }
+    }
+
+    // DB flows and body formatting finish off the main thread, which waitForIdle
+    // does not track — poll for the text instead.
+    private fun awaitText(text: String, substring: Boolean = false) {
+        rule.waitUntil(5_000) {
+            rule.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
     @Test
     fun bodySection_marksEmptyBody() {
         rule.setContent {
@@ -75,6 +135,7 @@ class ComposeUiTest {
                 BodySection(body = null, bodyKind = "none", contentType = null, imageBytes = null)
             }
         }
+        awaitText("(no body)")
         rule.onNodeWithText("(no body)").assertIsDisplayed()
     }
 
@@ -90,6 +151,7 @@ class ComposeUiTest {
                 )
             }
         }
+        awaitText("hello", substring = true)
         rule.onNodeWithText("hello", substring = true).assertIsDisplayed()
     }
 }

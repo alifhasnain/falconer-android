@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,9 +54,15 @@ fun TransactionDetailScreen(
     viewModel: TransactionDetailViewModel,
     onBack: () -> Unit,
 ) {
-    val tx by viewModel.transaction.collectAsStateWithLifecycle()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val tx = (state as? TransactionDetailState.Ready)?.transaction
     val pagerState = rememberPagerState(pageCount = { TABS.size })
     val scope = rememberCoroutineScope()
+
+    // The row was deleted under us (e.g. cleared from the host app while this
+    // screen sat in the back stack): back to the list rather than "Loading…" forever.
+    val gone = state is TransactionDetailState.Gone
+    LaunchedEffect(gone) { if (gone) onBack() }
 
     Scaffold(
         containerColor = FalconerColors.Background,
